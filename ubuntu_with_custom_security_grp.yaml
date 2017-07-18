@@ -1,0 +1,58 @@
+heat_template_version: ocata
+
+description: >
+  Example template with custom security group
+
+parameters:
+
+  key_name:
+    type: string
+    description: key pair for ssh to the instance
+
+  image_id:
+    type: string
+    description: OS image name or id for the instance to boot
+
+  instance_type:
+    type: string
+    description: flavor to be used for instance instantiation
+    constraints:
+      - allowed_values: [ m1.tiny, m1.medium ]
+        description: use any one of the allowed values m1.tiny or m1.medium
+
+resources:
+
+  custom_secgrp:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      rules:
+        - protocol: tcp
+          port_range_min: 22 
+          port_range_max: 22 
+          remote_ip_prefix: 0.0.0.0/0
+        - protocol: icmp
+          remote_ip_prefix: 0.0.0.0/0
+
+  instance_port:
+    type: OS::Neutron::Port
+    properties:
+      network: provider
+      security_groups:
+        - default
+        - { get_resource: custom_secgrp}
+
+  instance:
+    type: OS::Nova::Server
+    properties:
+      flavor: { get_param: instance_type }
+      image: { get_param: image_id }
+      key_name: { get_param: key_name }
+      networks:
+        - port: { get_resource: instance_port }
+
+outputs:
+
+  instance_ip:
+    description: IP of the instance
+    value: { get_attr: [instance, first_address] }
+
