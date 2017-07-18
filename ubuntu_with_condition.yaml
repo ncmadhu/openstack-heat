@@ -1,0 +1,58 @@
+heat_template_version: ocata
+
+description: >
+  Example template for conditonal instantiation
+
+parameters:
+
+  env_type:
+    type: string
+    default: test
+
+  key_name:
+    type: string
+    description: keypair name for ssh login to the instance
+
+  image_id:
+    type: string
+    description: Name or id of the OS image for instantiation
+
+  instance_type:
+    type: string
+    description: Flavor to be used for the instantiation
+    constraints:
+      - allowed_values: [m1.tiny, m1.medium]
+        description: value must be one of m1.tiny or m1.medium
+
+
+conditions:
+
+  create_prod_res: {equals: [{ get_param: env_type }, "prod"]}
+
+resources:
+
+  HeatUbuntu:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: image_id }
+      flavor: { get_param: instance_type }
+      key_name: { get_param: key_name }
+
+  HeatSecondUbuntu:
+    type: OS::Nova::Server
+    condition: create_prod_res
+    properties:
+      image: { get_param: image_id }
+      flavor: { get_param: instance_type }
+      key_name: { get_param: key_name }
+
+outputs:
+  first_host_ip:
+    description: IP of the first ubuntu
+    value: { get_attr: [HeatUbuntu, first_address] }
+
+  second_host_ip:
+    description: IP of the second ubuntu
+    condition: create_prod_res
+    value: { get_attr: [HeatSecondUbuntu, first_address] }
+
